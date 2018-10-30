@@ -10,12 +10,14 @@ public class TransferThread extends Thread {
     private OutputStream out;
     private OutputStreamWriter console;
     private byte[] buffer;
+    private boolean closeOut;
 
-    TransferThread(InputStream in, OutputStream out, OutputStreamWriter console) {
+    TransferThread(InputStream in, OutputStream out, OutputStreamWriter console, boolean closeOut) {
         this.in = in;
         this.out = out;
         this.console = console;
         buffer = new byte[4096];
+        this.closeOut = closeOut;
     }
 
     @Override
@@ -38,6 +40,9 @@ public class TransferThread extends Thread {
         }
         try {
             out.flush();
+            if (closeOut) {
+                out.close();
+            }
         } catch (IOException ignored) {
         }
         if (FTPConfig.logLevel >= LogLevel.INFO) {

@@ -276,7 +276,7 @@ class FTPSession {
         processAfterMark();
         TransferThread transferThread;
         try {
-            transferThread = new TransferThread(dataSocket.getInputStream(), consoleOut, consoleWriter);
+            transferThread = new TransferThread(dataSocket.getInputStream(), consoleOut, consoleWriter, false);
         } catch (IOException e) {
             throw new CommandFailException(e.getMessage());
         }
@@ -546,7 +546,7 @@ class FTPSession {
         processAfterMark();
         TransferThread transferThread;
         try {
-            transferThread = new TransferThread(in, dataSocket.getOutputStream(), consoleWriter);
+            transferThread = new TransferThread(in, dataSocket.getOutputStream(), consoleWriter, true);
         } catch (IOException e) {
             throw new CommandFailException(e.getMessage());
         }
@@ -595,7 +595,7 @@ class FTPSession {
         processAfterMark();
         TransferThread transferThread;
         try {
-            transferThread = new TransferThread(dataSocket.getInputStream(), out, consoleWriter);
+            transferThread = new TransferThread(dataSocket.getInputStream(), out, consoleWriter, false);
         } catch (IOException e) {
             throw new CommandFailException(e.getMessage());
         }

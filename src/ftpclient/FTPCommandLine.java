@@ -26,7 +26,7 @@ class FTPCommandLine {
         try {
             Terminal terminal = TerminalBuilder.builder().system(true).build();
             LineReader reader = LineReaderBuilder.builder().completer(new StringsCompleter(FTPConfig.supportedCommands))
-                    .completer(new FileNameCompleter()).terminal(terminal).build();
+                    .terminal(terminal).build();
 
             boolean first = true;
             while (true) {

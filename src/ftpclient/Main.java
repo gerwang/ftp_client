@@ -65,7 +65,7 @@ public class Main {
             System.exit(0);
         }
         if (cmd.hasOption('c')) {
-            FTPConfig.cwdArg = cmd.getOptionValue('c');
+            FTPConfig.cwdArg = cmd.getOptionValue('c'); //<@bug not used
         }
     }
 

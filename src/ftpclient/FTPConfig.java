@@ -18,5 +18,5 @@ class FTPConfig {
             "help", "debug", "verbose", "binary", "system",
             "close", "user", "ls", "dir", "rename",
             "get", "recv", "put", "send", "cd",
-            "mkdir", "rmdir", "pwd"};
+            "mkdir", "rmdir", "pwd", "!"};
 }
