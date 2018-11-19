@@ -167,8 +167,8 @@ class FTPSession {
             throw new CommandFailException("ipv" + address.length + " address instead of ipv4 address");
         }
         int port = listener.getLocalPort();
-        String msg = "PORT " + address[0] + "," + address[1] + "," + address[2]
-                + "," + address[3] + "," + (port >> 8) + "," + (port & 255);
+        String msg = "PORT " + ((int) address[0] + 256) % 256 + "," + ((int) address[1] + 256) % 256 + ","
+                + ((int) address[2] + 256) % 256 + "," + ((int) address[3] + 256) % 256 + "," + (port >> 8) + "," + (port & 255);
         writeConsole(msg);
         writeConnection(msg);
         acceptThread = new AcceptThread(listener);
@@ -199,7 +199,7 @@ class FTPSession {
             int port;
             try {
                 for (int i = 0; i < 4; i++) {
-                    bytes[i] = Byte.parseByte(m.group(i + 1));
+                    bytes[i] = (byte) Integer.parseInt(m.group(i + 1)); // prev bug: java do not have unsigned byte
                 }
                 port = (Integer.parseInt(m.group(5)) << 8) + Integer.parseInt(m.group(6));
             } catch (NumberFormatException e) {
