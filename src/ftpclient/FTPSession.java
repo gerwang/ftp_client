@@ -408,7 +408,7 @@ class FTPSession {
         setWaitType(SessionWait.PASSWORD); // prev bug ftl
     }
 
-    private void handleBinary() throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void handleBinary() throws ConsoleCloseException, SocketCloseException, CommandFailException {
         String msg = "TYPE I";
         writeConsole(msg);
         writeConnection(msg);
@@ -448,7 +448,7 @@ class FTPSession {
         }
     }
 
-    private void handleRmdir(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void handleRmdir(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         String msg = "RMD " + parameter;
         writeConsole(msg);
         writeConnection(msg);

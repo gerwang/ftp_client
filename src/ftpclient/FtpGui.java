@@ -11,6 +11,8 @@ import ftpclient.exceptions.SocketCloseException;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,6 +48,38 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
         passwordText.setText("anonymous");
 
         consoleText.setEditable(false);
+
+        fileTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent mouseEvent) {
+                if (mouseEvent.getClickCount() == 2) {
+                    try {
+                        int row = fileTable.rowAtPoint(mouseEvent.getPoint());
+                        if (row == -1) {
+                            return;
+                        }
+                        int modelRow = fileTable.convertRowIndexToModel(row);
+                        String fileName = (String) fileTable.getModel().getValueAt(modelRow, 0);
+                        String filePermissions = (String) fileTable.getModel().getValueAt(modelRow, 3);
+                        if (!FTPConfig.isDirectory(filePermissions)) {
+                            fileTable.clearSelection();
+                            fileTable.addRowSelectionInterval(row, row);
+                            doDownload();
+                        } else {
+                            routeTo(Paths.get(cwd).resolve(fileName).toString());
+                        }
+                    } catch (SocketCloseException | ConsoleCloseException e) {
+                        JOptionPane.showMessageDialog(FtpGui.this, e.getMessage(), "切换路径失败", JOptionPane.ERROR_MESSAGE);
+                        try {
+                            disconnect();
+                        } catch (CommandFailException | ConsoleCloseException | SocketCloseException ignored) {
+                        }
+                    } catch (CommandFailException e) {
+                        JOptionPane.showMessageDialog(FtpGui.this, e.getMessage(), "切换路径失败", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -85,24 +119,26 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
         uploadButton = new javax.swing.JButton();
         renameButton = new javax.swing.JButton();
         downloadButton = new javax.swing.JButton();
+        removeButton = new javax.swing.JButton();
+        jLabel5 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("client");
 
         fileTable.setModel(new javax.swing.table.DefaultTableModel(
-                new Object[][]{
+            new Object [][] {
 
-                },
-                new String[]{
-                        "名称", "大小", "修改时间", "属性", "所有者", "用户组", "实际大小"
-                }
+            },
+            new String [] {
+                "名称", "大小", "修改时间", "属性", "所有者", "用户组", "实际大小"
+            }
         ) {
-            boolean[] canEdit = new boolean[]{
-                    false, false, false, false, false, false, false
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit[columnIndex];
+                return canEdit [columnIndex];
             }
         });
         fileTable.setShowHorizontalLines(false);
@@ -138,19 +174,19 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
         });
 
         statusTable.setModel(new javax.swing.table.DefaultTableModel(
-                new Object[][]{
+            new Object [][] {
 
-                },
-                new String[]{
-                        "名称", "状态", "进度", "本地路径", "<->", "远程路径", "速度"
-                }
+            },
+            new String [] {
+                "名称", "状态", "进度", "本地路径", "<->", "远程路径", "速度"
+            }
         ) {
-            boolean[] canEdit = new boolean[]{
-                    false, false, false, false, false, false, false
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit[columnIndex];
+                return canEdit [columnIndex];
             }
         });
         statusTable.setShowHorizontalLines(false);
@@ -224,107 +260,124 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
             }
         });
 
+        removeButton.setText("删除选中文件夹");
+        removeButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                removeButtonActionPerformed(evt);
+            }
+        });
+
+        jLabel5.setText("可以双击文件或文件夹");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
-                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(layout.createSequentialGroup()
-                                .addContainerGap()
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(mkdirText, javax.swing.GroupLayout.PREFERRED_SIZE, 149, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(mkdirButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(uploadButton)
+                        .addGap(12, 12, 12)
+                        .addComponent(downloadButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(renameButton)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(removeButton)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jScrollPane4)
+                            .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addGroup(layout.createSequentialGroup()
-                                                .addComponent(mkdirText, javax.swing.GroupLayout.PREFERRED_SIZE, 149, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(mkdirButton)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                .addComponent(uploadButton)
-                                                .addGap(12, 12, 12)
-                                                .addComponent(downloadButton)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                .addComponent(renameButton)
-                                                .addGap(0, 288, Short.MAX_VALUE))
-                                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                                        .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING)
-                                                        .addComponent(jScrollPane4)
-                                                        .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.LEADING)
-                                                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                                        .addComponent(jLabel1)
-                                                                        .addComponent(backwardButton))
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                                        .addGroup(layout.createSequentialGroup()
-                                                                                .addComponent(forwardButton)
-                                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                                                .addComponent(portPasvButton))
-                                                                        .addComponent(ipText, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jLabel2)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(portText, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jLabel3)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(usernameText, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jLabel4)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(passwordText)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                                .addComponent(connectButton)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                                .addComponent(disconnectButton))
-                                                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                                                                .addComponent(addressText)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                                .addComponent(gotoButton)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                                .addComponent(cdUpButton)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                                .addComponent(refreshButton)))
-                                                .addContainerGap())))
+                                    .addComponent(jLabel1)
+                                    .addComponent(backwardButton))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(ipText, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jLabel2)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(portText, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jLabel3)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(usernameText, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jLabel4)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(passwordText, javax.swing.GroupLayout.DEFAULT_SIZE, 87, Short.MAX_VALUE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(connectButton)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(disconnectButton))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(forwardButton)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(portPasvButton)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jLabel5)
+                                        .addGap(0, 0, Short.MAX_VALUE))))
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
+                                .addComponent(addressText)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(gotoButton)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(cdUpButton)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(refreshButton)))
+                        .addContainerGap())))
         );
         layout.setVerticalGroup(
-                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(layout.createSequentialGroup()
-                                .addGap(20, 20, 20)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jLabel1)
-                                        .addComponent(ipText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(jLabel2)
-                                        .addComponent(portText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(jLabel3)
-                                        .addComponent(usernameText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(jLabel4)
-                                        .addComponent(passwordText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(disconnectButton)
-                                        .addComponent(connectButton))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(forwardButton)
-                                        .addComponent(backwardButton)
-                                        .addComponent(portPasvButton))
-                                .addGap(5, 5, 5)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(addressText)
-                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(gotoButton)
-                                                .addComponent(cdUpButton)
-                                                .addComponent(refreshButton)))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 214, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(mkdirText, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(mkdirButton)
-                                        .addComponent(uploadButton)
-                                        .addComponent(renameButton)
-                                        .addComponent(downloadButton))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 132, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 129, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap())
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGap(20, 20, 20)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(ipText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel2)
+                    .addComponent(portText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel3)
+                    .addComponent(usernameText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel4)
+                    .addComponent(passwordText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(disconnectButton)
+                    .addComponent(connectButton))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(forwardButton)
+                    .addComponent(backwardButton)
+                    .addComponent(portPasvButton)
+                    .addComponent(jLabel5))
+                .addGap(5, 5, 5)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(addressText)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(gotoButton)
+                        .addComponent(cdUpButton)
+                        .addComponent(refreshButton)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 214, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(mkdirText, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(mkdirButton)
+                    .addComponent(uploadButton)
+                    .addComponent(renameButton)
+                    .addComponent(downloadButton)
+                    .addComponent(removeButton))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 132, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 129, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
 
         pack();
@@ -332,6 +385,28 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
 
     FTPSession getSession() {
         return session;
+    }
+
+
+    private void doRmdir() throws CommandFailException, SocketCloseException, ConsoleCloseException {
+        if (session.getStatus() != SessionStatus.LOGGEDIN) {
+            throw new CommandFailException("not logged in");
+        }
+
+        int[] rows = fileTable.getSelectedRows();
+        if (rows.length == 0) {
+            throw new CommandFailException("no directory selected");
+        }
+
+        for (int row : rows) {
+            row = fileTable.convertRowIndexToModel(row);
+            if (!FTPConfig.isDirectory((String) fileTable.getModel().getValueAt(row, 3))) {
+                throw new CommandFailException("file cannot be removed");
+            }
+            String fileName = (String) fileTable.getModel().getValueAt(row, 0);
+            String absolutePath = Paths.get(cwd, fileName).toString();
+            session.handleRmdir(absolutePath);
+        }
     }
 
     private void doDownload() throws CommandFailException, SocketCloseException, ConsoleCloseException {
@@ -350,11 +425,12 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
         chooser.setAcceptAllFileFilterUsed(false);
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             for (int row : rows) {
-                if (FTPConfig.isDirectory((String) fileTable.getValueAt(row, 3))) {
+                row = fileTable.convertRowIndexToModel(row);
+                if (FTPConfig.isDirectory((String) fileTable.getModel().getValueAt(row, 3))) {
                     throw new CommandFailException("directory cannot be downloaded");
                 }
-                long totalSize = (long) fileTable.getValueAt(row, 6);
-                String fileName = (String) fileTable.getValueAt(row, 0);
+                long totalSize = (long) fileTable.getModel().getValueAt(row, 6);
+                String fileName = (String) fileTable.getModel().getValueAt(row, 0);
                 String absolutePath = Paths.get(cwd, fileName).toString();
                 File targetFile = chooser.getSelectedFile().toPath().resolve(fileName).toFile();
                 long downloaded = 0;
@@ -400,6 +476,9 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
         if (session.getStatus() != SessionStatus.LOGGEDIN) {
             throw new CommandFailException("not logged in");
         }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
+        }
         session.handlePwd("");
         session.handleLs(cwd);
     }
@@ -408,13 +487,22 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
         if (session.getStatus() != SessionStatus.LOGGEDIN) {
             throw new CommandFailException("not logged in");
         }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
+        }
         session.handleCd(path);
         doRefresh();
     }
 
     private void routeTo(String path) throws CommandFailException, ConsoleCloseException, SocketCloseException {
+        if (session.getStatus() != SessionStatus.LOGGEDIN) {
+            throw new CommandFailException("not logged in");
+        }
         if (!path.startsWith("/")) {
             throw new CommandFailException("path in address bar must start with /");
+        }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
         }
         while (addressStack.size() > addressTop) {
             addressStack.remove(addressStack.size() - 1);
@@ -425,22 +513,40 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
     }
 
     private void routeBack() throws CommandFailException, ConsoleCloseException, SocketCloseException {
+        if (session.getStatus() != SessionStatus.LOGGEDIN) {
+            throw new CommandFailException("not logged in");
+        }
         if (addressTop <= 1) {
             throw new CommandFailException("no previous path");
+        }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
         }
         String path = addressStack.get(--addressTop - 1);
         doRoute(path);
     }
 
     private void routeForward() throws CommandFailException, ConsoleCloseException, SocketCloseException {
+        if (session.getStatus() != SessionStatus.LOGGEDIN) {
+            throw new CommandFailException("not logged in");
+        }
         if (addressTop == addressStack.size()) {
             throw new CommandFailException("no succeeding path");
+        }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
         }
         String path = addressStack.get(addressTop++);
         doRoute(path);
     }
 
     private void cdUp() throws SocketCloseException, ConsoleCloseException, CommandFailException {
+        if (session.getStatus() != SessionStatus.LOGGEDIN) {
+            throw new CommandFailException("not logged in");
+        }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
+        }
         String path = cwd;
         Path target = Paths.get(path).resolve("..").normalize();
         routeTo(target.toString());
@@ -449,6 +555,9 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
     private void doMkdir() throws CommandFailException, ConsoleCloseException, SocketCloseException {
         if (session.getStatus() != SessionStatus.LOGGEDIN) {
             throw new CommandFailException("not logged in");
+        }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
         }
         String name = mkdirText.getText();
         mkdirText.setText("");
@@ -459,6 +568,9 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
     private void doRename() throws CommandFailException, ConsoleCloseException, SocketCloseException {
         if (session.getStatus() != SessionStatus.LOGGEDIN) {
             throw new CommandFailException("not logged in");
+        }
+        if (scheduler.getSize() != 0) {
+            throw new CommandFailException("still have unfinished tasks");
         }
         if (fileTable.getSelectedRowCount() == 0) {
             throw new CommandFailException("no directory selected");
@@ -483,20 +595,23 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
     private void disconnect() throws CommandFailException, ConsoleCloseException, SocketCloseException {
         DefaultTableModel model = (DefaultTableModel) fileTable.getModel();
         model.setRowCount(0);
+        model = (DefaultTableModel) statusTable.getModel();
+        model.setRowCount(0);
         addressText.setText("");
 
         addressStack.clear();
         addressTop = 0;
 
+        scheduler.clearTasks();
+
         if (session.getStatus() == SessionStatus.DISCONNECTED) {
             throw new CommandFailException("already disconnected");
         }
         session.handleClose();
-        // TODO clear gui and task queue
     }
 
     private void connectButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_connectButtonActionPerformed
-        if (session.getStatus() == SessionStatus.CONNECTED) {
+        if (session.getStatus() == SessionStatus.LOGGEDIN) {
             JOptionPane.showMessageDialog(this, "已经登录了，请先断开连接", "已经登录", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
@@ -509,6 +624,7 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
             session.providePort(portString);
             session.handleUser(username);
             session.providePassword(password);
+            session.handleBinary();
             routeTo("/");
         } catch (SocketCloseException | ConsoleCloseException | CommandFailException e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), "连接失败", JOptionPane.ERROR_MESSAGE);
@@ -662,15 +778,29 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
         try {
             doUpload();
         } catch (SocketCloseException | ConsoleCloseException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), "下载失败", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, e.getMessage(), "上传失败", JOptionPane.ERROR_MESSAGE);
             try {
                 disconnect();
             } catch (CommandFailException | ConsoleCloseException | SocketCloseException ignored) {
             }
         } catch (CommandFailException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage(), "下载失败", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, e.getMessage(), "上传失败", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_uploadButtonActionPerformed
+
+    private void removeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeButtonActionPerformed
+        try {
+            doRmdir();
+        } catch (SocketCloseException | ConsoleCloseException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "删除文件夹失败", JOptionPane.ERROR_MESSAGE);
+            try {
+                disconnect();
+            } catch (CommandFailException | ConsoleCloseException | SocketCloseException ignored) {
+            }
+        } catch (CommandFailException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "删除文件夹失败", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_removeButtonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -723,6 +853,7 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane4;
@@ -732,10 +863,10 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
     private javax.swing.JButton portPasvButton;
     private javax.swing.JTextField portText;
     private javax.swing.JButton refreshButton;
+    private javax.swing.JButton removeButton;
     private javax.swing.JButton renameButton;
     private javax.swing.JTable statusTable;
     private javax.swing.JButton uploadButton;
     private javax.swing.JTextField usernameText;
     // End of variables declaration//GEN-END:variables
-
 }

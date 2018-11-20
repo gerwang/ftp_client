@@ -45,7 +45,7 @@ public class TransferThread extends Thread {
                 }
             } catch (IOException e) {
                 if (listener != null) {
-                    listener.onError();
+                    listener.onError(e.getMessage());
                 }
                 if (FTPConfig.logLevel >= LogLevel.DEBUG) {
                     e.printStackTrace();

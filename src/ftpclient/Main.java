@@ -76,6 +76,7 @@ public class Main {
             FTPCommandLine commandLine = new FTPCommandLine();
             commandLine.mainLoop();
         } else {
+            FTPConfig.logLevel = LogLevel.DEBUG;
             FtpGui.main(args);
         }
     }

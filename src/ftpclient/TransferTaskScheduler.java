@@ -34,14 +34,13 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
     }
 
     void addTask(TransferTask task) {
-        tasks.add(task);
         DefaultTableModel model = (DefaultTableModel) statusTable.getModel();
         model.addRow(new Object[]{
                 task.fileName, "等待中", task.downloaded + "/" + task.total, task.localPath, getDirectionMark(task.command), task.remotePath, ""
         });
         task.row = model.getRowCount() - 1;
         model.fireTableRowsInserted(task.row, task.row);
-        System.out.println(model.getRowCount());
+        tasks.add(task);
     }
 
     public void run() {
@@ -53,7 +52,7 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
                 return;
             }
             activeTask = task;
-            statusTable.setValueAt("下载中", activeTask.row, 1);
+            statusTable.getModel().setValueAt("下载中", activeTask.row, 1);
             TransferThread transferThread = null;
             try {
                 if (task.command.equals("RETR")) {
@@ -63,11 +62,11 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
                     mainGui.getSession().handleGet(task.remotePath);
                     transferThread = mainGui.getSession().getRetrieveThread(task.localPath);
                 } else if (task.command.equals("STOR")) {
-                    mainGui.getSession().handlePut(task.remotePath);
-                    transferThread = mainGui.getSession().getStoreThread(task.localPath);
+                    mainGui.getSession().handlePut(task.localPath);
+                    transferThread = mainGui.getSession().getStoreThread(task.remotePath);
                 }
             } catch (CommandFailException | ConsoleCloseException | SocketCloseException e) {
-                onError();
+                onError(e.getMessage());
                 continue;
             }
 
@@ -82,7 +81,7 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
             try {
                 ret = mainGui.getSession().parseResponse();
             } catch (SocketCloseException | CommandFailException | ConsoleCloseException e) {
-                onError();
+                onError(e.getMessage());
                 continue;
             }
             try {
@@ -91,7 +90,7 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
                 return;
             }
             if (ret != 226) {
-                onError();
+                onError("invalid response code: " + ret);
                 continue;
             }
             activeTask = null;
@@ -106,7 +105,7 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
         lastTime = currentTime;
         String speedText = FTPConfig.humanReadableSize("" + accumulate * 1000 / elapsedTime) + "/s";
         accumulate = 0;
-        statusTable.setValueAt(speedText, activeTask.row, 6); // todo need test
+        statusTable.getModel().setValueAt(speedText, activeTask.row, 6);
     }
 
     @Override
@@ -120,12 +119,13 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
         if (currentTime > lastTime + 1000) {
             updateSpeed(currentTime);
         }
-        statusTable.setValueAt(activeTask.downloaded + "/" + activeTask.total, activeTask.row, 2); // todo need test
+        statusTable.getModel().setValueAt(activeTask.downloaded + "/" + activeTask.total, activeTask.row, 2);
     }
 
     @Override
-    public void onError() {
-        statusTable.setValueAt("已失败", activeTask.row, 1);
+    public void onError(String message) {
+        JOptionPane.showMessageDialog(this.mainGui, message, "传输失败", JOptionPane.ERROR_MESSAGE);
+        statusTable.getModel().setValueAt("已失败", activeTask.row, 1);
         mainGui.getSession().clearDataSocket();
         activeTask = null;
     }
@@ -133,9 +133,17 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
     @Override
     public void onDone() {
         long currentTime = System.currentTimeMillis();
-        if (currentTime > lastTime) {
+        if (currentTime > lastTime && accumulate > 0) {
             updateSpeed(currentTime);
         }
-        statusTable.setValueAt("已完成", activeTask.row, 1);
+        statusTable.getModel().setValueAt("已完成", activeTask.row, 1);
+    }
+
+    int getSize() {
+        return this.tasks.size();
+    }
+
+    void clearTasks() {
+        tasks.clear();
     }
 }
