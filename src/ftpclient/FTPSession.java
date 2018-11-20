@@ -19,11 +19,21 @@ class FTPSession {
     private OutputStream consoleOut;
 
     private String host;
-    private OutputStreamWriter consoleWriter;
+    private ConsoleWriter consoleWriter;
     private String prompt;
     private SessionWait waitType;
     private SessionStatus status = SessionStatus.DISCONNECTED;
     private String previousPath = "/";
+
+    private PwdListener pwdListener = null;
+
+    SessionStatus getStatus() {
+        return status;
+    }
+
+    void setPwdListener(PwdListener pwdListener) {
+        this.pwdListener = pwdListener;
+    }
 
     String getPrompt() {
         return prompt;
@@ -58,7 +68,14 @@ class FTPSession {
 
 
     FTPSession(OutputStream out) {
-        consoleWriter = new OutputStreamWriter(out);
+        consoleWriter = new WrapperConsoleWriter(out);
+        consoleOut = out;
+        setWaitType(SessionWait.COMMAND);
+    }
+
+
+    FTPSession(ConsoleWriter consoleWriter, OutputStream out) {
+        this.consoleWriter = consoleWriter;
         consoleOut = out;
         setWaitType(SessionWait.COMMAND);
     }
@@ -86,7 +103,7 @@ class FTPSession {
                 + (line.charAt(2) - '0');
     }
 
-    private int parseResponse() throws SocketCloseException, CommandFailException, ConsoleCloseException {
+    int parseResponse() throws SocketCloseException, CommandFailException, ConsoleCloseException {
         while (true) {
             if (connectionReader == null) {
                 throw new CommandFailException("receive: connection not open");
@@ -227,7 +244,7 @@ class FTPSession {
         }
     }
 
-    private void clearDataSocket() {
+    void clearDataSocket() {
         if (dataSocket != null) { // prev bug: forget to judge null
             try {
                 dataSocket.close();
@@ -264,7 +281,7 @@ class FTPSession {
         }
     }
 
-    private void handleLs(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    private TransferThread getLsThread(String parameter) throws CommandFailException, SocketCloseException, ConsoleCloseException {
         startTransfer();
         String msg = "LIST " + parameter;
         writeConsole(msg);
@@ -276,13 +293,17 @@ class FTPSession {
         processAfterMark();
         TransferThread transferThread;
         try {
-            transferThread = new TransferThread(dataSocket.getInputStream(), consoleOut, consoleWriter, false);
+            transferThread = new TransferThread(dataSocket.getInputStream(), consoleOut, consoleWriter, false, this, false);
         } catch (IOException e) {
             throw new CommandFailException(e.getMessage());
         }
+        return transferThread;
+    }
 
+    void handleLs(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+        TransferThread transferThread = getLsThread(parameter);
         transferThread.start();
-        ret = parseResponse();
+        int ret = parseResponse();
         try {
             transferThread.join();
         } catch (InterruptedException ignored) {
@@ -290,7 +311,6 @@ class FTPSession {
         if (ret != 226) {
             throw new CommandFailException("invalid response code: " + ret);
         }
-        clearDataSocket();
     }
 
     private void handleExternalCommand(String command) {
@@ -321,7 +341,7 @@ class FTPSession {
         FTPConfig.cwd = newCwd;
     }
 
-    private void handleClose() throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void handleClose() throws ConsoleCloseException, SocketCloseException, CommandFailException {
         String msg = "QUIT";
         writeConsole(msg);
         writeConnection(msg);
@@ -362,7 +382,7 @@ class FTPSession {
         }
     }
 
-    private void handlePass() throws ConsoleCloseException {
+    void handlePass() throws ConsoleCloseException {
         FTPConfig.active = !FTPConfig.active;
         if (FTPConfig.logLevel > LogLevel.NONE) {
             try {
@@ -374,7 +394,7 @@ class FTPSession {
         }
     }
 
-    private void handleUser(String username) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void handleUser(String username) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         if (username.trim().equals("")) {
             username = "" + System.getProperty("user.name");
         }
@@ -398,7 +418,7 @@ class FTPSession {
         }
     }
 
-    private void handleCd(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void handleCd(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         String msg = "CWD " + parameter;
         writeConsole(msg);
         writeConnection(msg);
@@ -408,7 +428,17 @@ class FTPSession {
         }
     }
 
-    private void handleMkdir(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void handleRest(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+        String msg = "REST " + parameter;
+        writeConsole(msg);
+        writeConnection(msg);
+        int ret = parseResponse();
+        if (ret != 350) {
+            throw new CommandFailException("invalid response code: " + ret);
+        }
+    }
+
+    void handleMkdir(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         String msg = "MKD " + parameter;
         writeConsole(msg);
         writeConnection(msg);
@@ -448,8 +478,11 @@ class FTPSession {
         }
     }
 
-    private void handlePwd(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
+    void handlePwd(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
         String res = doPwd(parameter);
+        if (pwdListener != null) {
+            pwdListener.refreshPwd(res);
+        }
         try {
             consoleWriter.write(res + "\n"); // prev bug: forget new line
             consoleWriter.flush();
@@ -458,7 +491,7 @@ class FTPSession {
         }
     }
 
-    private void handleRename(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void handleRename(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         String msg = "RNFR " + parameter;
         writeConsole(msg);
         writeConnection(msg);
@@ -470,7 +503,7 @@ class FTPSession {
         setWaitType(SessionWait.RNTO);
     }
 
-    private void provideRenameTo(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void provideRenameTo(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         setWaitType(SessionWait.COMMAND);
 
         if (parameter.trim().equals("")) {
@@ -505,7 +538,7 @@ class FTPSession {
         }
     }
 
-    private void providePassword(String password) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    void providePassword(String password) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         setWaitType(SessionWait.COMMAND);
 
         String msg = "PASS " + password;
@@ -518,12 +551,12 @@ class FTPSession {
         status = SessionStatus.LOGGEDIN;
     }
 
-    private void handlePut(String parameter) {
+    void handlePut(String parameter) {
         previousPath = parameter;
         setWaitType(SessionWait.STOR);
     }
 
-    private void provideStore(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
+    TransferThread getStoreThread(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
         setWaitType(SessionWait.COMMAND);
         if (parameter.trim().equals("")) {
             parameter = previousPath;
@@ -546,13 +579,18 @@ class FTPSession {
         processAfterMark();
         TransferThread transferThread;
         try {
-            transferThread = new TransferThread(in, dataSocket.getOutputStream(), consoleWriter, true);
+            transferThread = new TransferThread(in, dataSocket.getOutputStream(), consoleWriter, true, this, true);
         } catch (IOException e) {
             throw new CommandFailException(e.getMessage());
         }
+        return transferThread;
+    }
+
+    private void provideStore(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
+        TransferThread transferThread = getStoreThread(parameter);
 
         transferThread.start();
-        ret = parseResponse();
+        int ret = parseResponse();
         try {
             transferThread.join();
         } catch (InterruptedException ignored) {
@@ -560,19 +598,14 @@ class FTPSession {
         if (ret != 226) {
             throw new CommandFailException("invalid response code: " + ret);
         }
-        try {
-            in.close();
-        } catch (IOException ignored) {
-        }
-        clearDataSocket();
     }
 
-    private void handleGet(String parameter) {
+    void handleGet(String parameter) {
         previousPath = parameter;
         setWaitType(SessionWait.RETR);
     }
 
-    private void provideRetrieve(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
+    TransferThread getRetrieveThread(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
         setWaitType(SessionWait.COMMAND);
         if (parameter.trim().equals("")) {
             parameter = previousPath;
@@ -595,13 +628,17 @@ class FTPSession {
         processAfterMark();
         TransferThread transferThread;
         try {
-            transferThread = new TransferThread(dataSocket.getInputStream(), out, consoleWriter, false);
+            transferThread = new TransferThread(dataSocket.getInputStream(), out, consoleWriter, true, this, false);
         } catch (IOException e) {
             throw new CommandFailException(e.getMessage());
         }
+        return transferThread;
+    }
 
+    private void provideRetrieve(String parameter) throws CommandFailException, ConsoleCloseException, SocketCloseException {
+        TransferThread transferThread = getRetrieveThread(parameter);
         transferThread.start();
-        ret = parseResponse();
+        int ret = parseResponse();
         try {
             transferThread.join();
         } catch (InterruptedException ignored) {
@@ -609,11 +646,6 @@ class FTPSession {
         if (ret != 226) {
             throw new CommandFailException("invalid response code: " + ret);
         }
-        try {
-            out.close();
-        } catch (IOException ignored) {
-        }
-        clearDataSocket();
     }
 
     private void provideUsername(String username) throws CommandFailException, ConsoleCloseException, SocketCloseException {
@@ -622,12 +654,12 @@ class FTPSession {
         handleUser(username);
     }
 
-    private void handleOpen(String parameter) {
+    void handleOpen(String parameter) {
         host = parameter.trim();
         setWaitType(SessionWait.PORT);
     }
 
-    private void providePort(String portName) throws SocketCloseException, ConsoleCloseException, CommandFailException {
+    void providePort(String portName) throws SocketCloseException, ConsoleCloseException, CommandFailException {
         setWaitType(SessionWait.COMMAND);
         int port;
         if (portName.trim().equals("")) {

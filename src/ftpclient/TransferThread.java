@@ -8,16 +8,25 @@ import java.io.OutputStreamWriter;
 public class TransferThread extends Thread {
     private InputStream in;
     private OutputStream out;
-    private OutputStreamWriter console;
+    private ConsoleWriter console;
     private byte[] buffer;
     private boolean closeOut;
+    private boolean closeIn;
+    private FTPSession session;
+    private TransferListener listener = null;
 
-    TransferThread(InputStream in, OutputStream out, OutputStreamWriter console, boolean closeOut) {
+    TransferThread(InputStream in, OutputStream out, ConsoleWriter console, boolean closeOut, FTPSession session, boolean closeIn) {
         this.in = in;
         this.out = out;
         this.console = console;
         buffer = new byte[4096];
         this.closeOut = closeOut;
+        this.session = session;
+        this.closeIn = closeIn;
+    }
+
+    void setListener(TransferListener listener) {
+        this.listener = listener;
     }
 
     @Override
@@ -31,7 +40,13 @@ public class TransferThread extends Thread {
                 }
                 out.write(buffer, 0, ret);
                 count += ret;
+                if (listener != null) {
+                    listener.onProgress(ret);
+                }
             } catch (IOException e) {
+                if (listener != null) {
+                    listener.onError();
+                }
                 if (FTPConfig.logLevel >= LogLevel.DEBUG) {
                     e.printStackTrace();
                     return;
@@ -45,12 +60,23 @@ public class TransferThread extends Thread {
             }
         } catch (IOException ignored) {
         }
+        if (closeIn) {
+            try {
+                in.close();
+            } catch (IOException ignored) {
+            }
+        }
         if (FTPConfig.logLevel >= LogLevel.INFO) {
             try {
                 console.write("transfer complete: " + count + " bytes\n");
                 console.flush();
             } catch (IOException ignored) {
             }
+        }
+
+        session.clearDataSocket();
+        if (listener != null) {
+            listener.onDone();
         }
     }
 }

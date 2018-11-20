@@ -75,6 +75,8 @@ public class Main {
         if (!FTPConfig.gui) {
             FTPCommandLine commandLine = new FTPCommandLine();
             commandLine.mainLoop();
-        }  // todo gui
+        } else {
+            FtpGui.main(args);
+        }
     }
 }
