@@ -27,6 +27,8 @@ class FTPSession {
 
     private PwdListener pwdListener = null;
 
+    long startPosition = 0;
+
     SessionStatus getStatus() {
         return status;
     }
@@ -428,7 +430,7 @@ class FTPSession {
         }
     }
 
-    void handleRest(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
+    private void handleRest(String parameter) throws ConsoleCloseException, SocketCloseException, CommandFailException {
         String msg = "REST " + parameter;
         writeConsole(msg);
         writeConnection(msg);
@@ -613,11 +615,15 @@ class FTPSession {
         File file = FTPConfig.cwd.resolve(parameter).toFile();
         FileOutputStream out;
         try {
-            out = new FileOutputStream(file);
+            out = new FileOutputStream(file, startPosition != 0);
         } catch (FileNotFoundException e) {
             throw new CommandFailException(e.getMessage());
         }
         startTransfer();
+        if (startPosition != 0) {
+            handleRest("" + startPosition);
+            startPosition = 0;
+        }
         String msg = "RETR " + previousPath;
         writeConsole(msg);
         writeConnection(msg);

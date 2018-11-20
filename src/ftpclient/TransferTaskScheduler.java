@@ -56,9 +56,7 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
             TransferThread transferThread = null;
             try {
                 if (task.command.equals("RETR")) {
-                    if (task.downloaded != 0) {
-                        mainGui.getSession().handleRest("" + task.downloaded);
-                    }
+                    mainGui.getSession().startPosition = task.downloaded;
                     mainGui.getSession().handleGet(task.remotePath);
                     transferThread = mainGui.getSession().getRetrieveThread(task.localPath);
                 } else if (task.command.equals("STOR")) {
