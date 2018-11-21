@@ -59,7 +59,6 @@ public class ConsoleEmulator implements ConsoleWriter {
             var = var.replaceAll(command, "<font color=\"#8A2BE2\"><b>" + command + "</b></font>");
         }
         var = var.replaceAll(ipRegex, "<b>$0</b>");
-        System.out.println(var);
         try {
             htmlEditorKit.insertHTML(document, document.getLength(), "<p>" + var + "</p>", 0, 0, null);
         } catch (BadLocationException | IOException ignored) {

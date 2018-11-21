@@ -35,8 +35,9 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
 
     void addTask(TransferTask task) {
         DefaultTableModel model = (DefaultTableModel) statusTable.getModel();
+        double progress = task.total == 0 ? 1.0 : (double) task.downloaded / task.total;
         model.addRow(new Object[]{
-                task.fileName, "等待中", task.downloaded + "/" + task.total, task.localPath, getDirectionMark(task.command), task.remotePath, ""
+                task.fileName, "等待中", progress, task.localPath, getDirectionMark(task.command), task.remotePath, ""
         });
         task.row = model.getRowCount() - 1;
         model.fireTableRowsInserted(task.row, task.row);
@@ -117,7 +118,8 @@ public class TransferTaskScheduler extends Thread implements TransferListener {
         if (currentTime > lastTime + 1000) {
             updateSpeed(currentTime);
         }
-        statusTable.getModel().setValueAt(activeTask.downloaded + "/" + activeTask.total, activeTask.row, 2);
+        double progress = activeTask.total == 0 ? 1.0 : (double) activeTask.downloaded / activeTask.total;
+        statusTable.getModel().setValueAt(progress, activeTask.row, 2);
     }
 
     @Override
