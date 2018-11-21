@@ -89,6 +89,27 @@ public class FtpGui extends javax.swing.JFrame implements PwdListener {
             progressBar.setValue((int) (progress * 100));
             return progressBar;
         });
+
+        downloadButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/download.gif")), downloadButton)));
+        uploadButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/upload.gif")), uploadButton)));
+        backwardButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/back.gif")), backwardButton)));
+        forwardButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/forward.gif")), forwardButton)));
+        removeButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/delete.gif")), removeButton)));
+        mkdirButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/mkd.gif")), mkdirButton)));
+        connectButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/connect.gif")), connectButton)));
+        disconnectButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/disconnect.gif")), disconnectButton)));
+        portPasvButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/port.gif")), portPasvButton)));
+        gotoButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/goto.gif")), gotoButton)));
+        cdUpButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/goback.gif")), cdUpButton)));
+        renameButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/rename.gif")), renameButton)));
+        refreshButton.setIcon(new ImageIcon(resizeImage(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/refresh.gif")), refreshButton)));
+
+    }
+
+    private static Image resizeImage(Image img, JButton jb) {
+        int offset = jb.getInsets().left;
+        int resizedHeight = jb.getHeight() - offset;
+        return img.getScaledInstance(resizedHeight, resizedHeight, Image.SCALE_SMOOTH);
     }
 
     /**
